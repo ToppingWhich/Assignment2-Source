@@ -1,9 +1,7 @@
 package graph.impl;
 
-import graph.iface.IEdge;
-import graph.iface.IGraph;
-import graph.iface.IIterator;
-import graph.iface.IVertex;
+import graph.iface.*;
+import graph.util.DLinkedList;
 
 /**
  * @Author liwenyan
@@ -14,63 +12,267 @@ import graph.iface.IVertex;
  * @Version 1.0
  */
 public class AdjacencyMatrixGraph<V,E> implements IGraph<V,E> {
+    /**
+     * Inner class to represent a vertex in an edge list graph implementation
+     */
+    private class AdjacencyMatrixVertex implements IVertex<V> {
+        // reference to a node in the vertex list
+        IPosition<IVertex<V>> node;
+
+        // element stored in this vertex
+        V element;
+        //一个顶点相邻的边的列表
+        public IList<IEdge<E>> adjacencyEdge;
+
+        public int listIndex;
+
+        public AdjacencyMatrixVertex(V element) {
+            this.element = element;
+        }
+        @Override
+        public V element() {
+            return element;
+        }
+
+        // It's useful to have a toString() method that can
+        // return details about this object, so you can
+        // print the object later and get useful information.
+        // This one prints the element
+        public String toString() {
+            return element.toString();
+        }
+    }
+
+    /**
+     * Inner class to represent an edge in an edge list graph implementation.
+     *
+     */
+    private class AdjacencyMatrixEdge implements IEdge<E> {
+        // reference to a node in the edge list
+        IPosition<IEdge<E>> node;
+
+        // reference to a node in the start point adjacency edge list
+        IPosition<IEdge<E>> startNode;
+
+        // reference to a node in the end point adjacency edge list
+        IPosition<IEdge<E>> endNode;
+
+        // element stored in this edge
+        E element;
+
+        // the start and end vertices that this edge connects
+        public AdjacencyMatrixVertex start, end;
+
+
+
+        // constructor to set the three fields
+        public AdjacencyMatrixEdge(AdjacencyMatrixVertex start, AdjacencyMatrixVertex end, E element) {
+            this.start = start;
+            this.end = end;
+            this.element = element;
+        }
+
+        @Override
+        public E element() {
+            return element;
+        }
+
+        public String toString() {
+            return element.toString();
+        }
+    }
+
+    // vertex list
+    private IList<IVertex<V>> vertices;
+
+    // edge list
+    private IList<IEdge<E>> edges;
+
+    //edgeMatrix
+    private IEdge<E>[][] edgeMatrix;
+
+    public AdjacencyMatrixGraph() {
+        // create new (empty) lists of edges and vertices
+        vertices = new DLinkedList<IVertex<V>>();
+        edges = new DLinkedList<IEdge<E>>();
+        edgeMatrix = new IEdge[vertices.size()][vertices.size()];
+    }
+
     @Override
     public IVertex<V>[] endVertices(IEdge<E> e) {
-        return new IVertex[0];
+        AdjacencyMatrixEdge edge = (AdjacencyMatrixEdge) e;
+        // create new array of length 2 that will contain
+        // the edge's end vertices
+        @SuppressWarnings("unchecked")
+        IVertex<V>[] endpoints = new IVertex[2];
+
+        // fill array
+        endpoints[0] = edge.start;
+        endpoints[1] = edge.end;
+
+        return endpoints;
     }
 
     @Override
     public IVertex<V> opposite(IVertex<V> v, IEdge<E> e) {
-        return null;
+        // find end points of Edge e
+        IVertex<V>[] endpoints = endVertices(e);
+
+        // return the end point that is not v
+        if (endpoints[0].equals(v)) {
+            return endpoints[1];
+        } else if (endpoints[1].equals(v)) {
+            return endpoints[0];
+        }
+
+        // Problem! e is not connected to v.
+        throw new RuntimeException("Error: cannot find opposite vertex.");
     }
 
     @Override
     public boolean areAdjacent(IVertex<V> v, IVertex<V> w) {
-        return false;
+        AdjacencyMatrixVertex vertexV = (AdjacencyMatrixVertex) v;
+        AdjacencyMatrixVertex vertexW = (AdjacencyMatrixVertex) w;
+        if (edgeMatrix[vertexV.listIndex][vertexW.listIndex]==null){
+            return false;
+        }else {
+            return true;
+        }
     }
 
     @Override
-    public V replace(IVertex<V> v, V o) {
-        return null;
+    public V replace(IVertex<V> v, V x) {
+        AdjacencyMatrixVertex vertex = (AdjacencyMatrixVertex) v;
+        // store old element that we should return
+        V temp = vertex.element;
+
+        // do the replacement
+        vertex.element = x;
+
+        // return the old value
+        return temp;
     }
 
     @Override
-    public E replace(IEdge<E> e, E o) {
-        return null;
+    public E replace(IEdge<E> e, E x) {
+        AdjacencyMatrixEdge edge = (AdjacencyMatrixEdge) e;
+        E temp = edge.element;
+        edge.element = x;
+        return temp;
     }
 
     @Override
-    public IVertex<V> insertVertex(V o) {
-        return null;
+    public IVertex<V> insertVertex(V v) {
+        // create new vertex
+        AdjacencyMatrixVertex vertex = new AdjacencyMatrixVertex(v);
+
+        // insert the vertex into the vertex list
+        // (returns a reference to the new Node that was created)
+        IPosition<IVertex<V>> node = vertices.insertLast(vertex);
+
+        // this reference must be stored in the vertex,
+        // to make it easier to remove the vertex later.
+        vertex.node = node;
+        vertex.listIndex=vertices.size()-1;
+        IEdge<E>[][] newEdgeMatrix = new IEdge[vertices.size()][vertices.size()];
+        for (int i = 0; i < vertices.size()-1; i++) {
+            for (int j = 0; j < vertices.size()-1; j++) {
+                newEdgeMatrix[i][j]=edgeMatrix[i][j];
+            }
+        }
+        edgeMatrix=newEdgeMatrix;
+        // return the new vertex that was created
+        return vertex;
     }
 
     @Override
     public IEdge<E> insertEdge(IVertex<V> v, IVertex<V> w, E o) {
-        return null;
+        // create new edge object
+        AdjacencyMatrixEdge edge = new AdjacencyMatrixEdge((AdjacencyMatrixVertex) v, (AdjacencyMatrixVertex) w, o);
+        AdjacencyMatrixVertex vertexV = (AdjacencyMatrixVertex) v;
+        AdjacencyMatrixVertex vertexW = (AdjacencyMatrixVertex) w;
+
+        // insert into the edge list and store the reference to the node
+        // in the edge object
+        IPosition<IEdge<E>> n = edges.insertLast(edge);
+        edge.node = n;
+
+        int startIndex = vertexV.listIndex;
+        int endIndex = vertexV.listIndex;
+
+        edgeMatrix[startIndex][endIndex] = edge;
+        edgeMatrix[endIndex][startIndex] = edge;
+        return edge;
     }
 
     @Override
     public V removeVertex(IVertex<V> v) {
-        return null;
+        IList<IEdge<E>> incidentEdges = new DLinkedList<IEdge<E>>();
+        IIterator<IEdge<E>> it = incidentEdges(v);
+        while( it.hasNext() )
+            incidentEdges.insertLast(it.next());
+
+        while (!incidentEdges.isEmpty())
+            removeEdge(incidentEdges.remove(incidentEdges.first()));
+
+        AdjacencyMatrixVertex vertex = (AdjacencyMatrixVertex) v;
+        vertices.remove(vertex.node);
+        //
+        IEdge<E>[][] newEdgeMatrix = new IEdge[vertices.size()][vertices.size()];
+        for (int i = 0; i < vertices.size(); i++) {
+            for (int j = 0; j < vertices.size(); j++) {
+                if(j<vertex.listIndex&&i<vertex.listIndex) {
+                    newEdgeMatrix[i][j] = edgeMatrix[i][j];
+                }else if(j>=vertex.listIndex&&i<vertex.listIndex){
+                    newEdgeMatrix[i][j] = edgeMatrix[i][j+1];
+                }else if(j<vertex.listIndex&&i>=vertex.listIndex){
+                    newEdgeMatrix[i][j] = edgeMatrix[i+1][j];
+                }else if(j>= vertex.listIndex&&i>=vertex.listIndex){
+                    newEdgeMatrix[i][j] = edgeMatrix[i+1][j+1];
+                }
+            }
+        }
+        edgeMatrix=newEdgeMatrix;
+        AdjacencyMatrixVertex vertexX = (AdjacencyMatrixVertex) vertices.next(vertex.node);
+        for (int i = 0; i < vertices.size()-vertex.listIndex-1; i++) {
+            vertexX.listIndex-=1;
+            if(vertices.next(vertexX.node)!=null) {
+                vertexX = (AdjacencyMatrixVertex) vertices.next(vertexX.node);
+            }
+        }
+        return vertex.element;
     }
 
     @Override
     public E removeEdge(IEdge<E> e) {
-        return null;
+        // remove edge from edge list and return its element
+        AdjacencyMatrixEdge edge = (AdjacencyMatrixEdge) e;
+        edgeMatrix[edge.end.listIndex][edge.start.listIndex]=null;
+        edgeMatrix[edge.start.listIndex][edge.end.listIndex]=null;
+        edges.remove(edge.node);
+        return edge.element;
     }
 
     @Override
     public IIterator<IEdge<E>> incidentEdges(IVertex<V> v) {
-        return null;
+        AdjacencyMatrixVertex vertex = (AdjacencyMatrixVertex) v;
+        IList<IEdge<E>> list = new DLinkedList<IEdge<E>>();
+        for (int i = 0; i < vertices.size(); i++) {
+            IEdge<E> edge = edgeMatrix[vertex.listIndex][i];
+            if(edge!=null){
+                list.insertLast(edge);
+            }
+        }
+        return list.iterator();
     }
 
     @Override
     public IIterator<IVertex<V>> vertices() {
-        return null;
+        return vertices.iterator();
     }
 
     @Override
     public IIterator<IEdge<E>> edges() {
-        return null;
+        return edges.iterator();
     }
 }

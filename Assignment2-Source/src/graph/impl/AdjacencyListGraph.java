@@ -98,7 +98,7 @@ public class AdjacencyListGraph<V,E> implements IGraph<V,E> {
     @Override
     public IVertex[] endVertices(IEdge e) {
         // need to cast Edge type to EdgeListEdge
-        AdjacencyListGraph.AdjacencyListEdge edge = (AdjacencyListGraph.AdjacencyListEdge) e;
+        AdjacencyListEdge edge = (AdjacencyListEdge) e;
 
         // create new array of length 2 that will contain
         // the edge's end vertices
